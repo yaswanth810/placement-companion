@@ -140,6 +140,105 @@ export type Database = {
         }
         Relationships: []
       }
+      mock_interviews: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          difficulty: string
+          feedback: Json | null
+          id: string
+          interview_type: string
+          messages: Json
+          overall_rating: number | null
+          questions_asked: number
+          status: string
+          target_role: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          feedback?: Json | null
+          id?: string
+          interview_type: string
+          messages?: Json
+          overall_rating?: number | null
+          questions_asked?: number
+          status?: string
+          target_role?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          difficulty?: string
+          feedback?: Json | null
+          id?: string
+          interview_type?: string
+          messages?: Json
+          overall_rating?: number | null
+          questions_asked?: number
+          status?: string
+          target_role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mock_tests: {
+        Row: {
+          answers: Json
+          category: string
+          completed_at: string | null
+          correct_answers: number
+          created_at: string
+          difficulty: string
+          id: string
+          max_time: number
+          questions: Json
+          score: number | null
+          status: string
+          subcategory: string | null
+          time_taken: number | null
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          category: string
+          completed_at?: string | null
+          correct_answers?: number
+          created_at?: string
+          difficulty?: string
+          id?: string
+          max_time?: number
+          questions?: Json
+          score?: number | null
+          status?: string
+          subcategory?: string | null
+          time_taken?: number | null
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          category?: string
+          completed_at?: string | null
+          correct_answers?: number
+          created_at?: string
+          difficulty?: string
+          id?: string
+          max_time?: number
+          questions?: Json
+          score?: number | null
+          status?: string
+          subcategory?: string | null
+          time_taken?: number | null
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
