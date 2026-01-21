@@ -18,6 +18,7 @@ import {
   MessageSquare, Briefcase, Users, ArrowLeft, Star,
   ThumbsUp, AlertCircle, Lightbulb, CheckCircle2
 } from "lucide-react";
+import { Json } from "@/integrations/supabase/types";
 
 interface Message {
   role: "user" | "assistant";
@@ -185,7 +186,7 @@ export default function MockInterviews() {
       await supabase
         .from("mock_interviews")
         .update({ 
-          messages: initialMessages as unknown as Record<string, unknown>[],
+          messages: initialMessages as unknown as Json,
           questions_asked: 1 
         })
         .eq("id", interviewData.id);
@@ -274,7 +275,7 @@ export default function MockInterviews() {
       await supabase
         .from("mock_interviews")
         .update({ 
-          messages: finalMessages as unknown as Record<string, unknown>[],
+          messages: finalMessages as unknown as Json,
           questions_asked: questionsAsked
         })
         .eq("id", currentInterview.id);
@@ -322,7 +323,7 @@ export default function MockInterviews() {
       await supabase
         .from("mock_interviews")
         .update({
-          feedback: feedbackData as unknown as Record<string, unknown>[],
+          feedback: feedbackData as unknown as Json,
           overall_rating: feedbackData.overallRating,
           status: "completed",
           completed_at: new Date().toISOString(),
