@@ -8,6 +8,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Learning from "./pages/Learning";
 import CodingPractice from "./pages/CodingPractice";
+import MockTests from "./pages/MockTests";
+import MockInterviews from "./pages/MockInterviews";
 import Resumes from "./pages/Resumes";
 import Applications from "./pages/Applications";
 import Roadmap from "./pages/Roadmap";
@@ -58,6 +60,8 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
       <Route path="/coding" element={<ProtectedRoute><CodingPractice /></ProtectedRoute>} />
+      <Route path="/mock-tests" element={<ProtectedRoute><MockTests /></ProtectedRoute>} />
+      <Route path="/mock-interviews" element={<ProtectedRoute><MockInterviews /></ProtectedRoute>} />
       <Route path="/resumes" element={<ProtectedRoute><Resumes /></ProtectedRoute>} />
       <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
       <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
