@@ -14,7 +14,8 @@ import { PageTransition, StaggerContainer, StaggerItem } from '@/components/ui/p
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, FileText, Download, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Download, CheckCircle2, XCircle, Loader2, Sparkles } from 'lucide-react';
+import { ResumeAnalyzer } from '@/components/resume/ResumeAnalyzer';
 import { format } from 'date-fns';
 
 interface Resume {
@@ -49,6 +50,8 @@ export default function Resumes() {
   const [editingResume, setEditingResume] = useState<Resume | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; resumeId: string | null }>({ open: false, resumeId: null });
+  const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [analyzerTargetRole, setAnalyzerTargetRole] = useState<string | undefined>();
   const [checklist, setChecklist] = useState({
     one_page: false,
     ats_friendly: false,
@@ -179,6 +182,11 @@ export default function Resumes() {
     setIsDialogOpen(true);
   };
 
+  const openAnalyzer = (targetRole?: string) => {
+    setAnalyzerTargetRole(targetRole);
+    setAnalyzerOpen(true);
+  };
+
   if (loading) {
     return <AppLayout><PageLoader text="Loading your resumes..." /></AppLayout>;
   }
@@ -192,10 +200,14 @@ export default function Resumes() {
               <h1 className="text-3xl font-display font-bold">Resume Manager</h1>
               <p className="text-muted-foreground mt-1">Manage and version your resumes</p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openDialog}><Plus className="h-4 w-4 mr-2" />Add Resume</Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => openAnalyzer()}>
+                <Sparkles className="h-4 w-4 mr-2" />AI Analyzer
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openDialog}><Plus className="h-4 w-4 mr-2" />Add Resume</Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader><DialogTitle>{editingResume ? 'Edit Resume' : 'Add Resume'}</DialogTitle></DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -242,6 +254,7 @@ export default function Resumes() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           {resumes.length === 0 ? (
@@ -305,6 +318,7 @@ export default function Resumes() {
         </div>
       </PageTransition>
       <ConfirmDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm({ ...deleteConfirm, open })} title="Delete Resume" description="Are you sure you want to delete this resume?" confirmLabel="Delete" onConfirm={handleDelete} variant="destructive" />
+      <ResumeAnalyzer open={analyzerOpen} onOpenChange={setAnalyzerOpen} targetRole={analyzerTargetRole} />
     </AppLayout>
   );
 }
