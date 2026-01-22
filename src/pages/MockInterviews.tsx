@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -77,6 +79,43 @@ export default function MockInterviews() {
   const [difficulty, setDifficulty] = useState("medium");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Speech recognition
+  const {
+    isListening,
+    isSupported: speechSupported,
+    transcript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition({
+    continuous: true,
+    interimResults: true,
+    language: 'en-US',
+    onError: (error) => {
+      toast.error(error);
+    },
+  });
+
+  // Append transcript to input when speech recognition produces final results
+  useEffect(() => {
+    if (transcript) {
+      setInputMessage((prev) => {
+        const separator = prev && !prev.endsWith(' ') ? ' ' : '';
+        return prev + separator + transcript;
+      });
+      resetTranscript();
+    }
+  }, [transcript, resetTranscript]);
+
+  const toggleVoiceInput = useCallback(() => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopListening]);
 
   const fetchInterviewHistory = useCallback(async () => {
     if (!user) return;
@@ -567,11 +606,37 @@ export default function MockInterviews() {
                   </CardContent>
 
                   <div className="border-t p-4">
+                    {/* Voice input indicator */}
+                    <AnimatePresence>
+                      {isListening && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mb-3"
+                        >
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 text-primary text-sm">
+                            <div className="flex gap-1">
+                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                            </div>
+                            <span className="font-medium">Listening...</span>
+                            {interimTranscript && (
+                              <span className="text-muted-foreground italic ml-2 truncate max-w-[200px]">
+                                "{interimTranscript}"
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <div className="flex gap-2">
                       <Textarea
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
-                        placeholder="Type your answer..."
+                        placeholder={isListening ? "Speak now..." : "Type your answer or use voice input..."}
                         className="resize-none"
                         rows={2}
                         onKeyDown={(e) => {
@@ -581,16 +646,43 @@ export default function MockInterviews() {
                           }
                         }}
                       />
-                      <Button 
-                        onClick={sendMessage} 
-                        disabled={!inputMessage.trim() || sendingMessage}
-                        size="lg"
-                      >
-                        <Send className="w-5 h-5" />
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant={isListening ? "default" : "outline"}
+                              size="lg"
+                              onClick={toggleVoiceInput}
+                              disabled={!speechSupported}
+                              className={isListening ? "bg-primary animate-pulse" : ""}
+                            >
+                              {isListening ? (
+                                <MicOff className="w-5 h-5" />
+                              ) : (
+                                <Mic className="w-5 h-5" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {!speechSupported 
+                              ? "Speech recognition not supported in this browser" 
+                              : isListening 
+                                ? "Stop voice input" 
+                                : "Start voice input"
+                            }
+                          </TooltipContent>
+                        </Tooltip>
+                        <Button 
+                          onClick={sendMessage} 
+                          disabled={!inputMessage.trim() || sendingMessage}
+                          size="lg"
+                        >
+                          <Send className="w-5 h-5" />
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Press Enter to send, Shift+Enter for new line
+                      Press Enter to send • Shift+Enter for new line • Click mic for voice input
                     </p>
                   </div>
                 </Card>
