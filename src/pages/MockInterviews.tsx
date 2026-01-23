@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Bot, Send, Mic, MicOff, Play, Square, History,
   MessageSquare, Briefcase, Users, ArrowLeft, Star,
-  ThumbsUp, AlertCircle, Lightbulb, CheckCircle2
+  ThumbsUp, AlertCircle, Lightbulb, CheckCircle2, Volume2, VolumeX
 } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
@@ -78,6 +78,11 @@ export default function MockInterviews() {
   const [targetRole, setTargetRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("medium");
   
+  // Text-to-speech state
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Speech recognition
@@ -116,6 +121,68 @@ export default function MockInterviews() {
       startListening();
     }
   }, [isListening, startListening, stopListening]);
+
+  // Text-to-speech function
+  const speakText = useCallback(async (text: string) => {
+    if (!ttsEnabled || !text) return;
+    
+    try {
+      setIsSpeaking(true);
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("TTS request failed");
+      }
+
+      const data = await response.json();
+      
+      if (data.audioContent) {
+        // Stop any currently playing audio
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        
+        const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        
+        audio.onended = () => {
+          setIsSpeaking(false);
+          audioRef.current = null;
+        };
+        
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          audioRef.current = null;
+        };
+        
+        await audio.play();
+      }
+    } catch (error) {
+      console.error("TTS error:", error);
+      setIsSpeaking(false);
+    }
+  }, [ttsEnabled]);
+
+  const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
+  }, []);
 
   const fetchInterviewHistory = useCallback(async () => {
     if (!user) return;
@@ -233,6 +300,11 @@ export default function MockInterviews() {
       setCurrentInterview(interviewData as unknown as MockInterview);
       setView("interview");
       toast.success("Interview started! Good luck!");
+      
+      // Speak the AI's greeting
+      if (aiMessage) {
+        speakText(aiMessage);
+      }
     } catch (error: unknown) {
       console.error("Error starting interview:", error);
       toast.error(error instanceof Error ? error.message : "Failed to start interview");
@@ -319,6 +391,10 @@ export default function MockInterviews() {
         })
         .eq("id", currentInterview.id);
 
+      // Speak the AI's response
+      if (aiMessage) {
+        speakText(aiMessage);
+      }
     } catch (error: unknown) {
       console.error("Error sending message:", error);
       toast.error(error instanceof Error ? error.message : "Failed to send message");
@@ -559,14 +635,46 @@ export default function MockInterviews() {
                         <CardTitle className="capitalize">{currentInterview.interview_type} Interview</CardTitle>
                         <CardDescription>{currentInterview.target_role}</CardDescription>
                       </div>
-                      <Button variant="destructive" size="sm" onClick={endInterview} disabled={loading}>
-                        {loading ? <LoadingSpinner size="sm" /> : (
-                          <>
-                            <Square className="w-4 h-4 mr-2" />
-                            End Interview
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant={isSpeaking ? "default" : "outline"} 
+                              size="sm"
+                              onClick={() => {
+                                if (isSpeaking) {
+                                  stopSpeaking();
+                                } else {
+                                  setTtsEnabled(!ttsEnabled);
+                                }
+                              }}
+                              className={isSpeaking ? "animate-pulse" : ""}
+                            >
+                              {ttsEnabled ? (
+                                <Volume2 className="w-4 h-4" />
+                              ) : (
+                                <VolumeX className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isSpeaking 
+                              ? "Stop speaking" 
+                              : ttsEnabled 
+                                ? "Voice enabled - click to disable" 
+                                : "Voice disabled - click to enable"
+                            }
+                          </TooltipContent>
+                        </Tooltip>
+                        <Button variant="destructive" size="sm" onClick={endInterview} disabled={loading}>
+                          {loading ? <LoadingSpinner size="sm" /> : (
+                            <>
+                              <Square className="w-4 h-4 mr-2" />
+                              End Interview
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   
