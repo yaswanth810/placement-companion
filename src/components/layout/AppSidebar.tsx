@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { motion } from 'framer-motion';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -38,12 +39,16 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-sidebar border-r border-sidebar-border">
+    <aside className="flex h-screen w-64 flex-col glass-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
+      <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border/50">
+        <motion.div 
+          className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary shadow-glow-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <Briefcase className="h-4 w-4 text-primary-foreground" />
-        </div>
+        </motion.div>
         <span className="font-display font-bold text-lg text-sidebar-foreground">
           Placement
         </span>
@@ -51,35 +56,55 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
-        <ul className="space-y-1">
-          {navigation.map((item) => {
+        <ul className="space-y-1.5">
+          {navigation.map((item, index) => {
             const isActive = location.pathname === item.href;
             return (
-              <li key={item.name}>
+              <motion.li 
+                key={item.name}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
                 <Link
                   to={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-soft'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground hover:shadow-sm'
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className={cn(
+                    "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                    isActive && "drop-shadow-sm"
+                  )} />
                   {item.name}
+                  {isActive && (
+                    <motion.div
+                      className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground"
+                      layoutId="activeIndicator"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    />
+                  )}
                 </Link>
-              </li>
+              </motion.li>
             );
           })}
         </ul>
       </nav>
 
       {/* User section */}
-      <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9">
+      <div className="border-t border-sidebar-border/50 p-4">
+        <motion.div 
+          className="flex items-center gap-3 rounded-xl bg-sidebar-accent/50 p-3"
+          whileHover={{ backgroundColor: 'hsl(var(--sidebar-accent) / 0.7)' }}
+        >
+          <Avatar className="h-9 w-9 ring-2 ring-primary/20 ring-offset-2 ring-offset-sidebar">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
-            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-sm font-medium">
               {user?.email ? getInitials(user.email) : <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
@@ -94,12 +119,12 @@ export function AppSidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            className="h-8 w-8 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
             onClick={signOut}
           >
             <LogOut className="h-4 w-4" />
           </Button>
-        </div>
+        </motion.div>
       </div>
     </aside>
   );
