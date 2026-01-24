@@ -258,25 +258,29 @@ export default function MockTests() {
   return (
     <AppLayout>
       <PageTransition>
-        <div className="p-6 max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div 
+            className="flex items-center justify-between mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             <div>
               <h1 className="text-3xl font-bold">Mock Tests</h1>
-              <p className="text-muted-foreground">Practice with AI-generated questions</p>
+              <p className="text-muted-foreground mt-1">Practice with AI-generated questions</p>
             </div>
             {view === "setup" && (
-              <Button variant="outline" onClick={() => setView("history")}>
+              <Button variant="outline" onClick={() => setView("history")} className="shadow-sm hover:shadow-md transition-shadow">
                 <History className="w-4 h-4 mr-2" />
                 History
               </Button>
             )}
             {(view === "history" || view === "result") && (
-              <Button variant="outline" onClick={resetTest}>
+              <Button variant="outline" onClick={resetTest} className="shadow-sm hover:shadow-md transition-shadow">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 New Test
               </Button>
             )}
-          </div>
+          </motion.div>
 
           <AnimatePresence mode="wait">
             {view === "setup" && (
@@ -289,44 +293,66 @@ export default function MockTests() {
               >
                 {/* Category Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {categories.map((cat) => (
-                    <Card
+                  {categories.map((cat, index) => (
+                    <motion.div
                       key={cat.value}
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        category === cat.value ? "ring-2 ring-primary" : ""
-                      }`}
-                      onClick={() => {
-                        setCategory(cat.value);
-                        if (cat.value !== "technical") setSubcategory("");
-                      }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
                     >
-                      <CardContent className="p-6 text-center">
-                        <cat.icon className={`w-12 h-12 mx-auto mb-3 ${
-                          category === cat.value ? "text-primary" : "text-muted-foreground"
-                        }`} />
-                        <h3 className="font-semibold text-lg">{cat.label}</h3>
-                        <p className="text-sm text-muted-foreground">{cat.description}</p>
-                      </CardContent>
-                    </Card>
+                      <Card
+                        className={`cursor-pointer card-interactive ${
+                          category === cat.value 
+                            ? "ring-2 ring-primary shadow-glow-sm border-primary/30" 
+                            : "hover:border-primary/20"
+                        }`}
+                        onClick={() => {
+                          setCategory(cat.value);
+                          if (cat.value !== "technical") setSubcategory("");
+                        }}
+                      >
+                        <CardContent className="p-6 text-center">
+                          <div className={`w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                            category === cat.value 
+                              ? "gradient-primary shadow-soft" 
+                              : "bg-muted"
+                          }`}>
+                            <cat.icon className={`w-7 h-7 ${
+                              category === cat.value ? "text-primary-foreground" : "text-muted-foreground"
+                            }`} />
+                          </div>
+                          <h3 className="font-semibold text-lg">{cat.label}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">{cat.description}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   ))}
                 </div>
 
                 {/* Technical Subcategory */}
                 {category === "technical" && (
-                  <Card>
+                  <Card className="card-hover">
                     <CardHeader>
-                      <CardTitle className="text-lg">Select Topic</CardTitle>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Code className="h-5 w-5 text-primary" />
+                        Select Topic
+                      </CardTitle>
+                      <CardDescription>Choose a technical topic to practice</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {technicalSubcategories.map((sub) => (
                           <Button
                             key={sub.value}
                             variant={subcategory === sub.value ? "default" : "outline"}
-                            className="h-auto py-3"
+                            className={`h-auto py-4 px-4 text-left justify-start transition-all duration-200 ${
+                              subcategory === sub.value 
+                                ? "shadow-soft ring-2 ring-primary/20" 
+                                : "hover:bg-accent hover:border-primary/30"
+                            }`}
                             onClick={() => setSubcategory(sub.value)}
                           >
-                            {sub.label}
+                            <span className="truncate">{sub.label}</span>
                           </Button>
                         ))}
                       </div>
@@ -335,16 +361,20 @@ export default function MockTests() {
                 )}
 
                 {/* Test Configuration */}
-                <Card>
+                <Card className="card-hover">
                   <CardHeader>
-                    <CardTitle className="text-lg">Test Configuration</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-primary" />
+                      Test Configuration
+                    </CardTitle>
+                    <CardDescription>Customize your test settings</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Difficulty</label>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium block">Difficulty</label>
                         <Select value={difficulty} onValueChange={setDifficulty}>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-background/50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -356,10 +386,10 @@ export default function MockTests() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Number of Questions</label>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium block">Number of Questions</label>
                         <Select value={numQuestions.toString()} onValueChange={(v) => setNumQuestions(parseInt(v))}>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-background/50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -373,7 +403,7 @@ export default function MockTests() {
                     </div>
 
                     <Button 
-                      className="w-full" 
+                      className="w-full btn-glow gradient-primary border-0" 
                       size="lg"
                       onClick={startTest}
                       disabled={loading || (category === "technical" && !subcategory)}
@@ -390,42 +420,59 @@ export default function MockTests() {
 
                 {/* Quick Stats */}
                 {testHistory.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <Target className="w-8 h-8 mx-auto mb-2 text-primary" />
+                  <motion.div 
+                    className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <Card className="card-hover overflow-hidden">
+                      <CardContent className="p-5 text-center relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="icon-container icon-container-primary w-12 h-12 mx-auto mb-3">
+                          <Target className="w-6 h-6" />
+                        </div>
                         <p className="text-2xl font-bold">{testHistory.length}</p>
                         <p className="text-sm text-muted-foreground">Tests Taken</p>
                       </CardContent>
                     </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <Trophy className="w-8 h-8 mx-auto mb-2 text-warning" />
+                    <Card className="card-hover overflow-hidden">
+                      <CardContent className="p-5 text-center relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-warning/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="icon-container icon-container-warning w-12 h-12 mx-auto mb-3">
+                          <Trophy className="w-6 h-6" />
+                        </div>
                         <p className="text-2xl font-bold">
                           {Math.round(testHistory.reduce((acc, t) => acc + t.score, 0) / testHistory.length)}%
                         </p>
                         <p className="text-sm text-muted-foreground">Avg Score</p>
                       </CardContent>
                     </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-success" />
+                    <Card className="card-hover overflow-hidden">
+                      <CardContent className="p-5 text-center relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-success/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="icon-container icon-container-success w-12 h-12 mx-auto mb-3">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
                         <p className="text-2xl font-bold">
                           {testHistory.reduce((acc, t) => acc + t.correct_answers, 0)}
                         </p>
                         <p className="text-sm text-muted-foreground">Correct Answers</p>
                       </CardContent>
                     </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <Clock className="w-8 h-8 mx-auto mb-2 text-info" />
+                    <Card className="card-hover overflow-hidden">
+                      <CardContent className="p-5 text-center relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-info/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                        <div className="icon-container icon-container-info w-12 h-12 mx-auto mb-3">
+                          <Clock className="w-6 h-6" />
+                        </div>
                         <p className="text-2xl font-bold">
                           {Math.round(testHistory.reduce((acc, t) => acc + (t.time_taken || 0), 0) / 60)}m
                         </p>
                         <p className="text-sm text-muted-foreground">Time Spent</p>
                       </CardContent>
                     </Card>
-                  </div>
+                  </motion.div>
                 )}
               </motion.div>
             )}

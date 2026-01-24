@@ -7,13 +7,13 @@ import { PageLoader } from '@/components/ui/loading-spinner';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/ui/page-transition';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { motion } from 'framer-motion';
 import {
   BookOpen,
   Code,
   Briefcase,
   Trophy,
   Flame,
-  Target,
   Calendar,
   TrendingUp,
   ArrowRight,
@@ -158,12 +158,12 @@ export default function Dashboard() {
   };
 
   const statCards = [
-    { title: 'Learning Goals', value: stats.totalLearningGoals, icon: BookOpen, color: 'text-primary bg-primary/10', href: '/learning' },
-    { title: 'Skills Completed', value: stats.completedSkills, icon: Trophy, color: 'text-success bg-success/10', href: '/learning' },
-    { title: 'Problems Solved', value: stats.problemsSolved, icon: Code, color: 'text-info bg-info/10', href: '/coding' },
-    { title: 'Current Streak', value: `${stats.currentStreak} days`, icon: Flame, color: 'text-warning bg-warning/10', href: '/coding' },
-    { title: 'Applications', value: stats.applicationsSent, icon: Briefcase, color: 'text-primary bg-primary/10', href: '/applications' },
-    { title: 'Interviews', value: stats.interviewsAttended, icon: Calendar, color: 'text-success bg-success/10', href: '/applications' },
+    { title: 'Learning Goals', value: stats.totalLearningGoals, icon: BookOpen, colorClass: 'icon-container-primary', href: '/learning' },
+    { title: 'Skills Completed', value: stats.completedSkills, icon: Trophy, colorClass: 'icon-container-success', href: '/learning' },
+    { title: 'Problems Solved', value: stats.problemsSolved, icon: Code, colorClass: 'icon-container-info', href: '/coding' },
+    { title: 'Current Streak', value: `${stats.currentStreak} days`, icon: Flame, colorClass: 'icon-container-warning', href: '/coding' },
+    { title: 'Applications', value: stats.applicationsSent, icon: Briefcase, colorClass: 'icon-container-primary', href: '/applications' },
+    { title: 'Interviews', value: stats.interviewsAttended, icon: Calendar, colorClass: 'icon-container-success', href: '/applications' },
   ];
 
   if (loading) {
@@ -179,53 +179,67 @@ export default function Dashboard() {
       <PageTransition>
         <div className="space-y-8">
           {/* Header */}
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <h1 className="text-3xl font-display font-bold">
-              Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || 'Student'}! 👋
+              Welcome back, <span className="text-gradient">{user?.user_metadata?.full_name?.split(' ')[0] || 'Student'}</span>! 👋
             </h1>
             <p className="text-muted-foreground mt-1">
               Here's an overview of your placement preparation journey.
             </p>
-          </div>
+          </motion.div>
 
           {/* Quote Card */}
-          <Card className="bg-gradient-to-r from-primary/10 via-accent to-primary/5 border-0 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <CardContent className="p-6 relative">
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Sparkles className="h-5 w-5 text-primary" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+          >
+            <Card className="gradient-border overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-info/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+              <CardContent className="p-6 relative">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl gradient-primary shadow-glow-sm">
+                    <Sparkles className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium italic leading-relaxed">"{quote}"</p>
+                    <p className="text-sm text-muted-foreground mt-2">— Daily Motivation</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-lg font-medium italic leading-relaxed">"{quote}"</p>
-                  <p className="text-sm text-muted-foreground mt-2">— Daily Motivation</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Stats Grid */}
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {statCards.map((stat) => (
+            {statCards.map((stat, index) => (
               <StaggerItem key={stat.title}>
                 <Link to={stat.href}>
-                  <Card className="group hover:shadow-md transition-all duration-200 hover:border-primary/20 cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                          <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                  <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                    <Card className="group card-hover cursor-pointer overflow-hidden">
+                      <CardContent className="p-6 relative">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="flex items-center justify-between relative">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                            <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                          </div>
+                          <div className={`icon-container p-3 ${stat.colorClass} transition-transform duration-300 group-hover:scale-110`}>
+                            <stat.icon className="h-6 w-6" />
+                          </div>
                         </div>
-                        <div className={`p-3 rounded-xl ${stat.color} transition-transform duration-200 group-hover:scale-110`}>
-                          <stat.icon className="h-6 w-6" />
+                        <div className="flex items-center gap-1 mt-4 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                          <span>View details</span>
+                          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                        <span>View details</span>
-                        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </Link>
               </StaggerItem>
             ))}
@@ -234,90 +248,116 @@ export default function Dashboard() {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weekly Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Weekly Practice Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={weeklyActivity}>
-                      <defs>
-                        <linearGradient id="colorProblems" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                      <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="problems"
-                        stroke="hsl(var(--primary))"
-                        fill="url(#colorProblems)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              <Card className="card-hover">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="icon-container icon-container-primary p-2">
+                      <TrendingUp className="h-4 w-4" />
+                    </div>
+                    Weekly Practice Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={weeklyActivity}>
+                        <defs>
+                          <linearGradient id="colorProblems" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" />
+                        <XAxis dataKey="name" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 20px -4px hsl(var(--primary) / 0.1)',
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="problems"
+                          stroke="hsl(var(--primary))"
+                          fill="url(#colorProblems)"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Application Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                  Application Status Distribution
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center">
-                  {applicationStatus.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={applicationStatus}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value}`}
-                        >
-                          {applicationStatus.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="text-center">
-                      <Briefcase className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
-                      <p className="text-muted-foreground text-sm">No applications yet</p>
-                      <Link to="/applications">
-                        <Button variant="link" size="sm" className="mt-2">
-                          Start applying <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      </Link>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4, duration: 0.4 }}
+            >
+              <Card className="card-hover">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="icon-container icon-container-primary p-2">
+                      <Briefcase className="h-4 w-4" />
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    Application Status Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 flex items-center justify-center">
+                    {applicationStatus.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={applicationStatus}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {applicationStatus.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '12px',
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="text-center">
+                        <div className="icon-container icon-container-primary p-4 mx-auto mb-4">
+                          <Briefcase className="h-8 w-8" />
+                        </div>
+                        <p className="text-muted-foreground text-sm">No applications yet</p>
+                        <Link to="/applications">
+                          <Button variant="link" size="sm" className="mt-2 group">
+                            Start applying 
+                            <ArrowRight className="h-3 w-3 ml-1 transition-transform group-hover:translate-x-1" />
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </PageTransition>
