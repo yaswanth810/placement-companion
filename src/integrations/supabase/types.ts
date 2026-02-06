@@ -61,10 +61,12 @@ export type Database = {
       }
       coding_problems: {
         Row: {
+          code: string | null
           created_at: string
           date_practiced: string
           difficulty: string
           id: string
+          language: string | null
           notes: string | null
           platform: string
           problem_name: string
@@ -73,10 +75,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           date_practiced?: string
           difficulty: string
           id?: string
+          language?: string | null
           notes?: string | null
           platform: string
           problem_name: string
@@ -85,10 +89,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           date_practiced?: string
           difficulty?: string
           id?: string
+          language?: string | null
           notes?: string | null
           platform?: string
           problem_name?: string

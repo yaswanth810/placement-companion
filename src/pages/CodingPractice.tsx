@@ -13,6 +13,7 @@ import { PageLoader } from '@/components/ui/loading-spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageTransition, StaggerContainer, StaggerItem } from '@/components/ui/page-transition';
+import { CodeEditor, languageTemplates } from '@/components/coding/CodeEditor';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,9 +21,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Edit, Trash2, Code, Flame, Target, Filter, AlertCircle, Loader2,
   Trophy, TrendingUp, Calendar, BookOpen, Zap, Star, CheckCircle2, Clock,
-  BarChart3, Award, Bookmark, Hash
+  BarChart3, Award, Bookmark, Hash, Eye, FileCode
 } from 'lucide-react';
-import { format, differenceInDays, startOfWeek, endOfWeek, eachDayOfInterval, isToday, isSameDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isToday } from 'date-fns';
 
 interface CodingProblem {
   id: string;
@@ -32,6 +33,8 @@ interface CodingProblem {
   status: 'solved' | 'revision_needed' | 'not_solved';
   date_practiced: string;
   notes: string | null;
+  code: string | null;
+  language: string | null;
   created_at: string;
 }
 
@@ -72,15 +75,32 @@ export default function CodingPractice() {
   const [submitting, setSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProblem, setEditingProblem] = useState<CodingProblem | null>(null);
+  const [viewingProblem, setViewingProblem] = useState<CodingProblem | null>(null);
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
-  const [filterTopic, setFilterTopic] = useState<string>('all');
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; problemId: string | null }>({ open: false, problemId: null });
-  const [activeTab, setActiveTab] = useState<'problems' | 'topics' | 'calendar'>('problems');
+  const [activeTab, setActiveTab] = useState<'problems' | 'topics'>('problems');
+  
+  // Form state for code
+  const [formCode, setFormCode] = useState('');
+  const [formLanguage, setFormLanguage] = useState('python');
 
   useEffect(() => {
     if (user) fetchProblems();
   }, [user]);
+
+  // Reset form code when dialog opens/closes or editing problem changes
+  useEffect(() => {
+    if (isDialogOpen) {
+      if (editingProblem) {
+        setFormCode(editingProblem.code || '');
+        setFormLanguage(editingProblem.language || 'python');
+      } else {
+        setFormCode(languageTemplates.python);
+        setFormLanguage('python');
+      }
+    }
+  }, [isDialogOpen, editingProblem]);
 
   const fetchProblems = async () => {
     if (!user) return;
@@ -109,6 +129,7 @@ export default function CodingPractice() {
     easy: problems.filter((p) => p.difficulty === 'easy' && p.status === 'solved').length,
     medium: problems.filter((p) => p.difficulty === 'medium' && p.status === 'solved').length,
     hard: problems.filter((p) => p.difficulty === 'hard' && p.status === 'solved').length,
+    withCode: problems.filter((p) => p.code && p.code.trim().length > 0).length,
   };
 
   // Calculate streak
@@ -126,7 +147,6 @@ export default function CodingPractice() {
       if (dates[i] === expected || (i === 0 && dates[i] === today)) {
         streak++;
       } else if (i === 0 && dates[0] !== today) {
-        // Check if yesterday was practiced
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         if (dates[0] === yesterday.toISOString().split('T')[0]) {
@@ -186,8 +206,31 @@ export default function CodingPractice() {
     const platform = formData.get('platform') as string;
     const datePracticed = formData.get('date_practiced') as string;
 
-    if (!problemName || !platform || !datePracticed) {
-      toast.error('Please fill all required fields');
+    // Validation
+    if (!problemName) {
+      toast.error('Problem name is required');
+      setSubmitting(false);
+      return;
+    }
+    if (problemName.length > 200) {
+      toast.error('Problem name must be less than 200 characters');
+      setSubmitting(false);
+      return;
+    }
+    if (!platform) {
+      toast.error('Please select a platform');
+      setSubmitting(false);
+      return;
+    }
+    if (!datePracticed) {
+      toast.error('Date is required');
+      setSubmitting(false);
+      return;
+    }
+
+    const notes = (formData.get('notes') as string) || '';
+    if (notes.length > 2000) {
+      toast.error('Notes must be less than 2000 characters');
       setSubmitting(false);
       return;
     }
@@ -199,7 +242,9 @@ export default function CodingPractice() {
       difficulty: formData.get('difficulty') as string,
       status: formData.get('status') as string,
       date_practiced: datePracticed,
-      notes: (formData.get('notes') as string) || null,
+      notes: notes || null,
+      code: formCode || null,
+      language: formLanguage,
     };
 
     try {
@@ -218,6 +263,8 @@ export default function CodingPractice() {
       fetchProblems();
       setIsDialogOpen(false);
       setEditingProblem(null);
+      setFormCode('');
+      setFormLanguage('python');
     } catch (error) {
       toast.error(editingProblem ? 'Failed to update' : 'Failed to log problem');
     } finally {
@@ -270,17 +317,24 @@ export default function CodingPractice() {
                 </div>
                 Coding Practice
               </h1>
-              <p className="text-muted-foreground mt-2">Track your DSA journey for placements</p>
+              <p className="text-muted-foreground mt-2">Track your DSA journey with code solutions</p>
             </div>
             
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setEditingProblem(null);
+                setFormCode('');
+                setFormLanguage('python');
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button onClick={() => setEditingProblem(null)} className="gradient-primary border-0 shadow-soft">
                   <Plus className="h-4 w-4 mr-2" />
                   Log Problem
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Code className="h-5 w-5 text-primary" />
@@ -322,6 +376,7 @@ export default function CodingPractice() {
                       name="problem_name"
                       placeholder="e.g., Two Sum, Merge Intervals"
                       defaultValue={editingProblem?.problem_name || ''}
+                      maxLength={200}
                       required
                     />
                   </div>
@@ -354,10 +409,26 @@ export default function CodingPractice() {
                     <Textarea
                       name="notes"
                       placeholder="e.g., Arrays, Two Pointer, HashMap approach..."
-                      rows={3}
+                      rows={2}
+                      maxLength={2000}
                       defaultValue={editingProblem?.notes || ''}
                     />
                   </div>
+                  
+                  {/* Code Editor */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <FileCode className="h-4 w-4" />
+                      Your Solution Code
+                    </Label>
+                    <CodeEditor
+                      code={formCode}
+                      language={formLanguage}
+                      onCodeChange={setFormCode}
+                      onLanguageChange={setFormLanguage}
+                    />
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-2">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
@@ -373,7 +444,7 @@ export default function CodingPractice() {
           </motion.div>
 
           {/* Stats Dashboard - LeetCode Style */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
               <Card className="card-hover overflow-hidden">
                 <CardContent className="p-4 relative">
@@ -384,7 +455,7 @@ export default function CodingPractice() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{stats.solved}</p>
-                      <p className="text-xs text-muted-foreground">Problems Solved</p>
+                      <p className="text-xs text-muted-foreground">Solved</p>
                     </div>
                   </div>
                 </CardContent>
@@ -401,7 +472,7 @@ export default function CodingPractice() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{streak}</p>
-                      <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+                      <p className="text-xs text-muted-foreground">Streak 🔥</p>
                     </div>
                   </div>
                 </CardContent>
@@ -418,7 +489,7 @@ export default function CodingPractice() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold">{totalPoints}</p>
-                      <p className="text-xs text-muted-foreground">Total Points</p>
+                      <p className="text-xs text-muted-foreground">Points</p>
                     </div>
                   </div>
                 </CardContent>
@@ -428,14 +499,14 @@ export default function CodingPractice() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
               <Card className="card-hover overflow-hidden">
                 <CardContent className="p-4 relative">
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-destructive/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-destructive/10">
-                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    <div className="p-2.5 rounded-xl bg-blue-500/10">
+                      <FileCode className="h-5 w-5 text-blue-500" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{stats.revision}</p>
-                      <p className="text-xs text-muted-foreground">Need Revision</p>
+                      <p className="text-2xl font-bold">{stats.withCode}</p>
+                      <p className="text-xs text-muted-foreground">With Code</p>
                     </div>
                   </div>
                 </CardContent>
@@ -443,24 +514,41 @@ export default function CodingPractice() {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Card className="card-hover overflow-hidden col-span-2 lg:col-span-1">
+              <Card className="card-hover overflow-hidden">
+                <CardContent className="p-4 relative">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-destructive/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-destructive/10">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.revision}</p>
+                      <p className="text-xs text-muted-foreground">Revision</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+              <Card className="card-hover overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-muted-foreground">By Difficulty</span>
+                    <span className="text-xs text-muted-foreground">Difficulty</span>
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <div className="flex-1 text-center">
-                      <p className="text-lg font-bold text-success">{stats.easy}</p>
-                      <p className="text-[10px] text-muted-foreground">Easy</p>
+                      <p className="text-sm font-bold text-success">{stats.easy}</p>
+                      <p className="text-[10px] text-muted-foreground">E</p>
                     </div>
                     <div className="flex-1 text-center border-x border-border">
-                      <p className="text-lg font-bold text-warning">{stats.medium}</p>
-                      <p className="text-[10px] text-muted-foreground">Med</p>
+                      <p className="text-sm font-bold text-warning">{stats.medium}</p>
+                      <p className="text-[10px] text-muted-foreground">M</p>
                     </div>
                     <div className="flex-1 text-center">
-                      <p className="text-lg font-bold text-destructive">{stats.hard}</p>
-                      <p className="text-[10px] text-muted-foreground">Hard</p>
+                      <p className="text-sm font-bold text-destructive">{stats.hard}</p>
+                      <p className="text-[10px] text-muted-foreground">H</p>
                     </div>
                   </div>
                 </CardContent>
@@ -469,7 +557,7 @@ export default function CodingPractice() {
           </div>
 
           {/* Weekly Activity Heatmap */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="card-hover">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -479,14 +567,14 @@ export default function CodingPractice() {
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between gap-2">
-                  {weeklyActivity.map(({ day, count, isToday }) => (
+                  {weeklyActivity.map(({ day, count, isToday: isTodayDay }) => (
                     <div key={day.toISOString()} className="flex-1 text-center">
                       <p className="text-[10px] text-muted-foreground mb-1">
                         {format(day, 'EEE')}
                       </p>
                       <div 
                         className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all ${
-                          isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+                          isTodayDay ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
                         } ${
                           count === 0 
                             ? 'bg-muted/50 text-muted-foreground' 
@@ -568,7 +656,7 @@ export default function CodingPractice() {
                   <EmptyState
                     icon={Code}
                     title="No problems logged yet"
-                    description="Start solving DSA problems and track your progress for placements!"
+                    description="Start solving DSA problems and track your progress with code!"
                     action={{
                       label: "Log Your First Problem",
                       onClick: () => {
@@ -589,9 +677,12 @@ export default function CodingPractice() {
                         <Card className="card-hover group">
                           <CardContent className="p-4">
                             <div className="flex items-center gap-4">
-                              {/* Problem Number */}
-                              <div className="hidden sm:flex w-10 h-10 rounded-lg bg-muted/50 items-center justify-center">
+                              {/* Problem Number & Code indicator */}
+                              <div className="hidden sm:flex w-10 h-10 rounded-lg bg-muted/50 items-center justify-center relative">
                                 <Hash className="h-4 w-4 text-muted-foreground" />
+                                {problem.code && (
+                                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                                )}
                               </div>
                               
                               {/* Problem Info */}
@@ -601,6 +692,12 @@ export default function CodingPractice() {
                                   <Badge variant="outline" className="text-xs">
                                     {problem.platform}
                                   </Badge>
+                                  {problem.code && (
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                      <FileCode className="h-3 w-3" />
+                                      {problem.language?.toUpperCase()}
+                                    </Badge>
+                                  )}
                                 </div>
                                 {problem.notes && (
                                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
@@ -626,6 +723,16 @@ export default function CodingPractice() {
                               
                               {/* Actions */}
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {problem.code && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => setViewingProblem(problem)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
@@ -701,6 +808,41 @@ export default function CodingPractice() {
           </AnimatePresence>
         </div>
       </PageTransition>
+
+      {/* View Code Dialog */}
+      <Dialog open={!!viewingProblem} onOpenChange={(open) => !open && setViewingProblem(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCode className="h-5 w-5 text-primary" />
+              {viewingProblem?.problem_name}
+            </DialogTitle>
+          </DialogHeader>
+          {viewingProblem && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">{viewingProblem.platform}</Badge>
+                <Badge className={difficultyConfig[viewingProblem.difficulty].color}>
+                  {viewingProblem.difficulty}
+                </Badge>
+                <Badge className={statusConfig[viewingProblem.status].color}>
+                  {statusConfig[viewingProblem.status].label}
+                </Badge>
+              </div>
+              {viewingProblem.notes && (
+                <p className="text-sm text-muted-foreground">{viewingProblem.notes}</p>
+              )}
+              <CodeEditor
+                code={viewingProblem.code || ''}
+                language={viewingProblem.language || 'python'}
+                onCodeChange={() => {}}
+                onLanguageChange={() => {}}
+                readOnly
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={deleteConfirm.open}
