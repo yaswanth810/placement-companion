@@ -55,6 +55,7 @@ const technicalSubcategories = [
   { value: "dbms", label: "Database Management" },
   { value: "os", label: "Operating Systems" },
   { value: "cn", label: "Computer Networks" },
+  { value: "cloud", label: "Cloud Computing" },
 ];
 
 const difficulties = [
