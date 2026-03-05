@@ -56,6 +56,15 @@ const technicalSubcategories = [
   { value: "os", label: "Operating Systems" },
   { value: "cn", label: "Computer Networks" },
   { value: "cloud", label: "Cloud Computing" },
+  { value: "java", label: "Java Programming" },
+  { value: "cpp", label: "C++ Programming" },
+  { value: "python", label: "Python Programming" },
+  { value: "sql", label: "SQL & Queries" },
+  { value: "se", label: "Software Engineering" },
+  { value: "sd", label: "System Design" },
+  { value: "web", label: "Web Technologies" },
+  { value: "aptitude", label: "Quantitative Aptitude" },
+  { value: "lr", label: "Logical Reasoning" },
 ];
 
 const difficulties = [
