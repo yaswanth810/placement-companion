@@ -1,1 +1,4 @@
 project_id = "vkcggzrnugjdmisufvqt"
+
+[functions.generate-dsa-content]
+verify_jwt = false
