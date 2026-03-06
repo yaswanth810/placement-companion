@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -32,10 +32,11 @@ Given a DSA topic, difficulty level, and programming language, generate a compre
    - Starter code template in the specified language
    - A complete solution in the specified language
    - Hints
+   - Test cases: Generate 5-6 test cases per problem including edge cases. First 3 should be visible (isHidden: false), rest hidden (isHidden: true), like real online judges.
 
 Return ONLY valid JSON in this exact format:
 {
-  "explanation": "# Topic Name\\n\\nMarkdown explanation here with examples, complexity analysis, key concepts...",
+  "explanation": "# Topic Name\\n\\nMarkdown explanation...",
   "mcqs": [
     {
       "id": 1,
@@ -54,6 +55,13 @@ Return ONLY valid JSON in this exact format:
       "examples": [
         { "input": "nums = [2,7,11,15], target = 9", "output": "[0,1]", "explanation": "nums[0] + nums[1] = 9" }
       ],
+      "testCases": [
+        { "id": 1, "input": "nums = [2,7,11,15], target = 9", "expectedOutput": "[0,1]", "isHidden": false },
+        { "id": 2, "input": "nums = [3,2,4], target = 6", "expectedOutput": "[1,2]", "isHidden": false },
+        { "id": 3, "input": "nums = [3,3], target = 6", "expectedOutput": "[0,1]", "isHidden": false },
+        { "id": 4, "input": "nums = [1], target = 1", "expectedOutput": "[]", "isHidden": true },
+        { "id": 5, "input": "nums = [0,0,0], target = 0", "expectedOutput": "[0,1]", "isHidden": true }
+      ],
       "starterCode": "code template here",
       "solution": "complete solution here",
       "hints": ["Hint 1", "Hint 2"]
@@ -64,7 +72,7 @@ Return ONLY valid JSON in this exact format:
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: \`Bearer \${LOVABLE_API_KEY}\`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -73,7 +81,7 @@ Return ONLY valid JSON in this exact format:
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Generate a complete learning module for the DSA topic: "${topic}" at "${difficulty}" difficulty level. The coding language should be "${language}". Make the explanation thorough with real-world analogies and the coding challenges progressively harder.`,
+            content: \`Generate a complete learning module for the DSA topic: "\${topic}" at "\${difficulty}" difficulty level. The coding language should be "\${language}". Make the explanation thorough with real-world analogies and the coding challenges progressively harder.\`,
           },
         ],
         temperature: 0.7,
@@ -93,13 +101,13 @@ Return ONLY valid JSON in this exact format:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(\`AI gateway error: \${response.status}\`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
     if (!jsonMatch) {
       throw new Error("Failed to parse content from AI response");
     }
