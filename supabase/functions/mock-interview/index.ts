@@ -10,6 +10,50 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const extractJsonFromResponse = (response: string): unknown => {
+    let cleaned = response
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/g, "")
+      .trim();
+
+    const jsonStart = cleaned.search(/[\{\[]/);
+    if (jsonStart === -1) {
+      throw new Error("No JSON object found in response");
+    }
+
+    const closingChar = cleaned[jsonStart] === "[" ? "]" : "}";
+    const jsonEnd = cleaned.lastIndexOf(closingChar);
+    if (jsonEnd === -1) {
+      throw new Error("No valid JSON boundary found in response");
+    }
+
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const repaired = cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+
+      return JSON.parse(repaired);
+    }
+  };
+
+  const parseWithRecovery = (content: string): unknown => {
+    try {
+      return extractJsonFromResponse(content);
+    } catch {
+      const lastBrace = content.lastIndexOf("}");
+      if (lastBrace > 0) {
+        const repairedObject = `${content.substring(0, lastBrace + 1)}`;
+        return extractJsonFromResponse(repairedObject);
+      }
+      throw new Error("Cannot parse response");
+    }
+  };
+
   try {
     const { messages, interviewType, targetRole, difficulty, action, resumeText } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -103,11 +147,20 @@ Rate on a scale of 1-10. Be constructive and helpful.`;
     if (action === "feedback") {
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Failed to parse feedback from AI response");
+
+      if (!content || typeof content !== "string") {
+        throw new Error("Empty feedback response from AI");
       }
-      return new Response(jsonMatch[0], {
+
+      let parsedFeedback: unknown;
+      try {
+        parsedFeedback = extractJsonFromResponse(content);
+      } catch (parseError) {
+        console.warn("Primary JSON parse failed, attempting recovery", parseError);
+        parsedFeedback = parseWithRecovery(content);
+      }
+
+      return new Response(JSON.stringify(parsedFeedback), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
