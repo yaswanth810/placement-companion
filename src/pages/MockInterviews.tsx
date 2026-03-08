@@ -839,7 +839,7 @@ export default function MockInterviews() {
                     {/* Interview info overlay */}
                     <div className="absolute top-4 left-4 flex items-center gap-2">
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2" />
+                        <span className="w-2 h-2 rounded-full bg-destructive animate-pulse mr-2" />
                         Live
                       </Badge>
                       <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm capitalize">
