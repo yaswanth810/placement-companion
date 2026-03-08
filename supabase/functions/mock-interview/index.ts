@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -11,17 +11,21 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, interviewType, targetRole, difficulty, action } = await req.json();
+    const { messages, interviewType, targetRole, difficulty, action, resumeText } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const resumeContext = resumeText 
+      ? `\n\nThe candidate has provided their resume. Use this to personalize your questions:\n---\n${resumeText.slice(0, 3000)}\n---\nAsk questions that relate to their specific experience, projects, and skills mentioned in the resume.`
+      : "";
+
     let systemPrompt = "";
     
     if (action === "start") {
-      systemPrompt = `You are an experienced ${interviewType} interviewer at a top tech company, conducting an interview for a ${targetRole || 'software engineer'} position. This is a ${difficulty} level interview.
+      systemPrompt = `You are an experienced ${interviewType} interviewer at a top tech company, conducting an interview for a ${targetRole || 'software engineer'} position. This is a ${difficulty} level interview.${resumeContext}
 
 Your role:
 - Start with a brief, friendly introduction
@@ -31,16 +35,18 @@ Your role:
 - For technical interviews: Ask about data structures, algorithms, system design, and coding concepts
 - For HR interviews: Ask about experiences, strengths, weaknesses, career goals
 - For behavioral interviews: Use STAR method questions about past experiences
+${resumeText ? "- Reference specific items from the candidate's resume in your questions" : ""}
 
 Start the interview now with a greeting and your first question.`;
     } else if (action === "continue") {
-      systemPrompt = `You are an experienced ${interviewType} interviewer at a top tech company, conducting an interview for a ${targetRole || 'software engineer'} position. This is a ${difficulty} level interview.
+      systemPrompt = `You are an experienced ${interviewType} interviewer at a top tech company, conducting an interview for a ${targetRole || 'software engineer'} position. This is a ${difficulty} level interview.${resumeContext}
 
 Guidelines for your response:
 - Acknowledge the candidate's answer briefly (good points or areas to improve)
 - Ask a follow-up question OR move to a new topic
 - Keep the conversation natural and professional
 - After 5-7 questions, you can wrap up the interview
+${resumeText ? "- Reference the candidate's resume experience when relevant" : ""}
 
 If the candidate says they want to end the interview, provide a summary of their performance.`;
     } else if (action === "feedback") {
@@ -106,7 +112,6 @@ Rate on a scale of 1-10. Be constructive and helpful.`;
       });
     }
 
-    // Stream the response for interview conversation
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
