@@ -107,12 +107,38 @@ Return ONLY valid JSON in this exact format:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
-    if (!jsonMatch) {
-      throw new Error("Failed to parse content from AI response");
+    if (!content) {
+      throw new Error("Empty response from AI");
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Remove markdown code blocks if present
+    let cleaned = content
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/g, "")
+      .trim();
+
+    // Find JSON object boundaries
+    const jsonStart = cleaned.indexOf("{");
+    const jsonEnd = cleaned.lastIndexOf("}");
+
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.error("Raw AI content:", content.substring(0, 500));
+      throw new Error("No JSON object found in AI response");
+    }
+
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      // Fix common issues: trailing commas, control chars
+      cleaned = cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x1F\x7F]/g, (ch) => ch === "\n" || ch === "\r" || ch === "\t" ? ch : "");
+      parsed = JSON.parse(cleaned);
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
