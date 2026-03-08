@@ -1,9 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -13,17 +12,16 @@ serve(async (req) => {
 
   try {
     const { text, voiceId = "JBFqnCBsd6RMkjVDRZzb" } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!ELEVENLABS_API_KEY) {
+      throw new Error("ELEVENLABS_API_KEY is not configured");
     }
 
     if (!text || typeof text !== "string") {
       throw new Error("Text is required");
     }
 
-    // Truncate text if too long (ElevenLabs has a 5000 char limit)
     const truncatedText = text.slice(0, 4500);
 
     const response = await fetch(
@@ -31,7 +29,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          "xi-api-key": LOVABLE_API_KEY,
+          "xi-api-key": ELEVENLABS_API_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -50,14 +48,25 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("ElevenLabs error:", errorText);
+      
+      if (response.status === 401) {
+        return new Response(JSON.stringify({ error: "Invalid ElevenLabs API key" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "ElevenLabs credits exhausted. Please add more credits." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       throw new Error(`TTS failed: ${response.status}`);
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    const base64Audio = base64Encode(audioBuffer);
-
-    return new Response(JSON.stringify({ audioContent: base64Audio }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const audioBlob = await response.blob();
+    return new Response(audioBlob, {
+      headers: { ...corsHeaders, "Content-Type": "audio/mpeg" },
     });
   } catch (error: unknown) {
     console.error("Error in text-to-speech:", error);

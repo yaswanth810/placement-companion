@@ -18,7 +18,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Bot, Send, Mic, MicOff, Play, Square, History,
   MessageSquare, Briefcase, Users, ArrowLeft, Star,
-  ThumbsUp, AlertCircle, Lightbulb, CheckCircle2, Volume2, VolumeX
+  ThumbsUp, AlertCircle, Lightbulb, CheckCircle2, Volume2, VolumeX,
+  Video, VideoOff, Phone, PhoneOff, FileText, Camera
 } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 
@@ -50,6 +51,14 @@ interface MockInterview {
   completed_at: string | null;
 }
 
+interface ResumeOption {
+  id: string;
+  resume_name: string;
+  target_role: string | null;
+  file_url: string | null;
+  notes: string | null;
+}
+
 const interviewTypes = [
   { value: "technical", label: "Technical Interview", icon: Briefcase, description: "DSA, System Design, Coding" },
   { value: "hr", label: "HR Interview", icon: Users, description: "Background, Goals, Culture Fit" },
@@ -61,6 +70,134 @@ const difficulties = [
   { value: "medium", label: "Mid Level" },
   { value: "hard", label: "Senior Level" },
 ];
+
+// AI avatar animation component
+function AIAvatar({ isSpeaking, isThinking }: { isSpeaking: boolean; isThinking: boolean }) {
+  return (
+    <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 via-accent/10 to-secondary/20 rounded-2xl overflow-hidden">
+      {/* Background animated circles */}
+      <div className="absolute inset-0">
+        <motion.div
+          className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-primary/10 blur-2xl"
+          animate={{ scale: isSpeaking ? [1, 1.3, 1] : 1, opacity: isSpeaking ? [0.3, 0.6, 0.3] : 0.2 }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-24 h-24 rounded-full bg-accent/10 blur-2xl"
+          animate={{ scale: isSpeaking ? [1.2, 1, 1.2] : 1, opacity: isSpeaking ? [0.4, 0.2, 0.4] : 0.15 }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      </div>
+
+      {/* AI face */}
+      <div className="relative z-10 flex flex-col items-center gap-4">
+        <motion.div
+          className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-2xl"
+          animate={isSpeaking ? { scale: [1, 1.05, 1] } : isThinking ? { rotate: [0, 5, -5, 0] } : {}}
+          transition={{ duration: isSpeaking ? 0.5 : 2, repeat: Infinity }}
+        >
+          <Bot className="w-12 h-12 md:w-16 md:h-16 text-primary-foreground" />
+        </motion.div>
+
+        {/* Sound waves when speaking */}
+        <AnimatePresence>
+          {isSpeaking && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-1"
+            >
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="w-1 bg-primary rounded-full"
+                  animate={{ height: [8, 24, 8] }}
+                  transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                />
+              ))}
+            </motion.div>
+          )}
+          {isThinking && !isSpeaking && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex gap-1.5"
+            >
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-2.5 h-2.5 bg-primary/60 rounded-full"
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <p className="text-sm font-medium text-muted-foreground">
+          {isSpeaking ? "Speaking..." : isThinking ? "Thinking..." : "AI Interviewer"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Webcam component
+function WebcamFeed({ isActive }: { isActive: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (isActive) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then((stream) => {
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch(() => {
+          // Camera not available, fail silently
+        });
+    } else {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    }
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isActive]);
+
+  if (!isActive) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/50 rounded-xl">
+        <div className="text-center">
+          <VideoOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Camera off</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+      className="w-full h-full object-cover rounded-xl mirror"
+      style={{ transform: "scaleX(-1)" }}
+    />
+  );
+}
 
 export default function MockInterviews() {
   const { user } = useAuth();
@@ -78,9 +215,16 @@ export default function MockInterviews() {
   const [targetRole, setTargetRole] = useState("Software Engineer");
   const [difficulty, setDifficulty] = useState("medium");
   
-  // Text-to-speech state
+  // Resume state
+  const [resumes, setResumes] = useState<ResumeOption[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [resumeText, setResumeText] = useState("");
+  
+  // Video call state
+  const [cameraOn, setCameraOn] = useState(true);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -103,7 +247,7 @@ export default function MockInterviews() {
     },
   });
 
-  // Append transcript to input when speech recognition produces final results
+  // Append transcript to input
   useEffect(() => {
     if (transcript) {
       setInputMessage((prev) => {
@@ -122,7 +266,7 @@ export default function MockInterviews() {
     }
   }, [isListening, startListening, stopListening]);
 
-  // Text-to-speech function
+  // TTS using ElevenLabs - now returns binary audio
   const speakText = useCallback(async (text: string) => {
     if (!ttsEnabled || !text) return;
     
@@ -137,39 +281,40 @@ export default function MockInterviews() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text: text.slice(0, 2000) }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("TTS request failed");
+        console.error("TTS failed:", response.status);
+        setIsSpeaking(false);
+        return;
       }
 
-      const data = await response.json();
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
       
-      if (data.audioContent) {
-        // Stop any currently playing audio
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current = null;
-        }
-        
-        const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-        
-        audio.onended = () => {
-          setIsSpeaking(false);
-          audioRef.current = null;
-        };
-        
-        audio.onerror = () => {
-          setIsSpeaking(false);
-          audioRef.current = null;
-        };
-        
-        await audio.play();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setIsSpeaking(false);
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        audioRef.current = null;
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      await audio.play();
     } catch (error) {
       console.error("TTS error:", error);
       setIsSpeaking(false);
@@ -184,9 +329,21 @@ export default function MockInterviews() {
     setIsSpeaking(false);
   }, []);
 
+  // Fetch resumes for selection
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("resumes")
+      .select("id, resume_name, target_role, file_url, notes")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setResumes(data);
+      });
+  }, [user]);
+
   const fetchInterviewHistory = useCallback(async () => {
     if (!user) return;
-    
     try {
       const { data, error } = await supabase
         .from("mock_interviews")
@@ -194,7 +351,6 @@ export default function MockInterviews() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
-      
       if (error) throw error;
       setInterviewHistory((data || []) as unknown as MockInterview[]);
     } catch (error) {
@@ -210,12 +366,25 @@ export default function MockInterviews() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // When resume is selected, fetch its notes as context
+  useEffect(() => {
+    if (!selectedResumeId) {
+      setResumeText("");
+      return;
+    }
+    const resume = resumes.find(r => r.id === selectedResumeId);
+    if (resume?.notes) {
+      setResumeText(resume.notes);
+    }
+    if (resume?.target_role && !targetRole) {
+      setTargetRole(resume.target_role);
+    }
+  }, [selectedResumeId, resumes]);
+
   const startInterview = async () => {
     if (!user) return;
-    
     setLoading(true);
     try {
-      // Create interview in database
       const { data: interviewData, error: insertError } = await supabase
         .from("mock_interviews")
         .insert({
@@ -231,7 +400,6 @@ export default function MockInterviews() {
 
       if (insertError) throw insertError;
 
-      // Get initial greeting from AI
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mock-interview`,
         {
@@ -246,6 +414,7 @@ export default function MockInterviews() {
             targetRole,
             difficulty,
             action: "start",
+            resumeText,
           }),
         }
       );
@@ -255,32 +424,31 @@ export default function MockInterviews() {
         throw new Error(error.error || "Failed to start interview");
       }
 
-      // Stream the response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let aiMessage = "";
       
       if (reader) {
+        let buffer = "";
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          buffer += decoder.decode(value, { stream: true });
           
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-          
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const content = json.choices?.[0]?.delta?.content;
-                if (content) {
-                  aiMessage += content;
-                  setMessages([{ role: "assistant", content: aiMessage }]);
-                }
-              } catch (e) {
-                // Ignore parse errors for partial chunks
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            
+            if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+            try {
+              const json = JSON.parse(line.slice(6));
+              const content = json.choices?.[0]?.delta?.content;
+              if (content) {
+                aiMessage += content;
+                setMessages([{ role: "assistant", content: aiMessage }]);
               }
-            }
+            } catch {}
           }
         }
       }
@@ -288,23 +456,16 @@ export default function MockInterviews() {
       const initialMessages: Message[] = [{ role: "assistant", content: aiMessage }];
       setMessages(initialMessages);
       
-      // Update interview with initial message
       await supabase
         .from("mock_interviews")
-        .update({ 
-          messages: initialMessages as unknown as Json,
-          questions_asked: 1 
-        })
+        .update({ messages: initialMessages as unknown as Json, questions_asked: 1 })
         .eq("id", interviewData.id);
 
       setCurrentInterview(interviewData as unknown as MockInterview);
       setView("interview");
       toast.success("Interview started! Good luck!");
       
-      // Speak the AI's greeting
-      if (aiMessage) {
-        speakText(aiMessage);
-      }
+      if (aiMessage) speakText(aiMessage);
     } catch (error: unknown) {
       console.error("Error starting interview:", error);
       toast.error(error instanceof Error ? error.message : "Failed to start interview");
@@ -315,6 +476,9 @@ export default function MockInterviews() {
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || !currentInterview || sendingMessage) return;
+    
+    // Stop listening when sending
+    if (isListening) stopListening();
     
     const userMessage: Message = { role: "user", content: inputMessage.trim() };
     const updatedMessages = [...messages, userMessage];
@@ -337,6 +501,7 @@ export default function MockInterviews() {
             targetRole: currentInterview.target_role,
             difficulty: currentInterview.difficulty,
             action: "continue",
+            resumeText,
           }),
         }
       );
@@ -346,32 +511,31 @@ export default function MockInterviews() {
         throw new Error(error.error || "Failed to get response");
       }
 
-      // Stream the response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let aiMessage = "";
       
       if (reader) {
+        let buffer = "";
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          buffer += decoder.decode(value, { stream: true });
           
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-          
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const json = JSON.parse(line.slice(6));
-                const content = json.choices?.[0]?.delta?.content;
-                if (content) {
-                  aiMessage += content;
-                  setMessages([...updatedMessages, { role: "assistant", content: aiMessage }]);
-                }
-              } catch (e) {
-                // Ignore parse errors for partial chunks
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            
+            if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+            try {
+              const json = JSON.parse(line.slice(6));
+              const content = json.choices?.[0]?.delta?.content;
+              if (content) {
+                aiMessage += content;
+                setMessages([...updatedMessages, { role: "assistant", content: aiMessage }]);
               }
-            }
+            } catch {}
           }
         }
       }
@@ -379,22 +543,14 @@ export default function MockInterviews() {
       const finalMessages: Message[] = [...updatedMessages, { role: "assistant", content: aiMessage }];
       setMessages(finalMessages);
       
-      // Count questions asked (simplified - count assistant messages)
       const questionsAsked = finalMessages.filter(m => m.role === "assistant").length;
       
-      // Update interview in database
       await supabase
         .from("mock_interviews")
-        .update({ 
-          messages: finalMessages as unknown as Json,
-          questions_asked: questionsAsked
-        })
+        .update({ messages: finalMessages as unknown as Json, questions_asked: questionsAsked })
         .eq("id", currentInterview.id);
 
-      // Speak the AI's response
-      if (aiMessage) {
-        speakText(aiMessage);
-      }
+      if (aiMessage) speakText(aiMessage);
     } catch (error: unknown) {
       console.error("Error sending message:", error);
       toast.error(error instanceof Error ? error.message : "Failed to send message");
@@ -405,10 +561,11 @@ export default function MockInterviews() {
 
   const endInterview = async () => {
     if (!currentInterview) return;
+    stopSpeaking();
+    if (isListening) stopListening();
     
     setLoading(true);
     try {
-      // Get feedback from AI
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mock-interview`,
         {
@@ -427,14 +584,11 @@ export default function MockInterviews() {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to get feedback");
-      }
+      if (!response.ok) throw new Error("Failed to get feedback");
 
       const feedbackData: InterviewFeedback = await response.json();
       setFeedback(feedbackData);
       
-      // Update interview in database
       await supabase
         .from("mock_interviews")
         .update({
@@ -445,6 +599,7 @@ export default function MockInterviews() {
         })
         .eq("id", currentInterview.id);
 
+      setCameraOn(false);
       setView("feedback");
       toast.success("Interview completed!");
     } catch (error: unknown) {
@@ -459,6 +614,7 @@ export default function MockInterviews() {
     setCurrentInterview(null);
     setMessages([]);
     setFeedback(null);
+    setCameraOn(true);
     setView("setup");
     fetchInterviewHistory();
   };
@@ -474,14 +630,27 @@ export default function MockInterviews() {
     }
   };
 
+  // Auto-send on voice when user pauses
+  useEffect(() => {
+    if (!isListening && inputMessage.trim() && view === "interview" && !sendingMessage) {
+      const timer = setTimeout(() => {
+        if (inputMessage.trim()) sendMessage();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isListening, inputMessage, view]);
+
   return (
     <AppLayout>
       <PageTransition>
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-4 md:p-6 max-w-6xl mx-auto">
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold">Mock Interviews</h1>
-              <p className="text-muted-foreground">Practice with AI-powered interviews</p>
+              <p className="text-muted-foreground">
+                {view === "interview" ? "Live Interview Session" : "AI-powered interview practice"}
+              </p>
             </div>
             {view === "setup" && (
               <Button variant="outline" onClick={() => setView("history")}>
@@ -498,6 +667,7 @@ export default function MockInterviews() {
           </div>
 
           <AnimatePresence mode="wait">
+            {/* ============ SETUP VIEW ============ */}
             {view === "setup" && (
               <motion.div
                 key="setup"
@@ -512,7 +682,7 @@ export default function MockInterviews() {
                     <Card
                       key={type.value}
                       className={`cursor-pointer transition-all hover:shadow-md ${
-                        interviewType === type.value ? "ring-2 ring-primary" : ""
+                        interviewType === type.value ? "ring-2 ring-primary shadow-lg" : ""
                       }`}
                       onClick={() => setInterviewType(type.value)}
                     >
@@ -530,7 +700,11 @@ export default function MockInterviews() {
                 {/* Configuration */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Interview Configuration</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Camera className="w-5 h-5 text-primary" />
+                      Interview Configuration
+                    </CardTitle>
+                    <CardDescription>Set up your live interview session</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -559,6 +733,33 @@ export default function MockInterviews() {
                       </div>
                     </div>
 
+                    {/* Resume Selection */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        Select Resume (AI will personalize questions)
+                      </label>
+                      <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a resume (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No resume</SelectItem>
+                          {resumes.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.resume_name} {r.target_role ? `• ${r.target_role}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedResumeId && selectedResumeId !== "none" && (
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-success" />
+                          Resume loaded — AI will ask questions based on your experience
+                        </p>
+                      )}
+                    </div>
+
                     <Button 
                       className="w-full" 
                       size="lg"
@@ -568,9 +769,9 @@ export default function MockInterviews() {
                       {loading ? (
                         <LoadingSpinner size="sm" className="mr-2" />
                       ) : (
-                        <Play className="w-5 h-5 mr-2" />
+                        <Video className="w-5 h-5 mr-2" />
                       )}
-                      {loading ? "Starting Interview..." : "Start Interview"}
+                      {loading ? "Connecting..." : "Start Live Interview"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -620,6 +821,7 @@ export default function MockInterviews() {
               </motion.div>
             )}
 
+            {/* ============ LIVE INTERVIEW VIEW ============ */}
             {view === "interview" && currentInterview && (
               <motion.div
                 key="interview"
@@ -628,175 +830,198 @@ export default function MockInterviews() {
                 exit={{ opacity: 0 }}
                 className="space-y-4"
               >
-                <Card className="h-[60vh] flex flex-col">
-                  <CardHeader className="border-b">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="capitalize">{currentInterview.interview_type} Interview</CardTitle>
-                        <CardDescription>{currentInterview.target_role}</CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant={isSpeaking ? "default" : "outline"} 
-                              size="sm"
-                              onClick={() => {
-                                if (isSpeaking) {
-                                  stopSpeaking();
-                                } else {
-                                  setTtsEnabled(!ttsEnabled);
-                                }
-                              }}
-                              className={isSpeaking ? "animate-pulse" : ""}
-                            >
-                              {ttsEnabled ? (
-                                <Volume2 className="w-4 h-4" />
-                              ) : (
-                                <VolumeX className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isSpeaking 
-                              ? "Stop speaking" 
-                              : ttsEnabled 
-                                ? "Voice enabled - click to disable" 
-                                : "Voice disabled - click to enable"
-                            }
-                          </TooltipContent>
-                        </Tooltip>
-                        <Button variant="destructive" size="sm" onClick={endInterview} disabled={loading}>
-                          {loading ? <LoadingSpinner size="sm" /> : (
-                            <>
-                              <Square className="w-4 h-4 mr-2" />
-                              End Interview
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                {/* Video Call Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[70vh]">
+                  {/* AI Interviewer - Main */}
+                  <div className="lg:col-span-2 relative">
+                    <AIAvatar isSpeaking={isSpeaking} isThinking={sendingMessage} />
+                    
+                    {/* Interview info overlay */}
+                    <div className="absolute top-4 left-4 flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+                        <span className="w-2 h-2 rounded-full bg-destructive animate-pulse mr-2" />
+                        Live
+                      </Badge>
+                      <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm capitalize">
+                        {currentInterview.interview_type}
+                      </Badge>
                     </div>
-                  </CardHeader>
-                  
-                  <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messages.map((message, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
-                      >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                        }`}>
-                          {message.role === "user" ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                        </div>
-                        <div className={`max-w-[80%] p-4 rounded-2xl ${
-                          message.role === "user" 
-                            ? "bg-primary text-primary-foreground rounded-br-md" 
-                            : "bg-muted rounded-bl-md"
-                        }`}>
-                          <p className="whitespace-pre-wrap">{message.content}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {sendingMessage && (
-                      <div className="flex gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <Bot className="w-5 h-5" />
-                        </div>
-                        <div className="bg-muted p-4 rounded-2xl rounded-bl-md">
-                          <LoadingSpinner size="sm" />
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </CardContent>
 
-                  <div className="border-t p-4">
-                    {/* Voice input indicator */}
-                    <AnimatePresence>
-                      {isListening && (
+                    {/* User webcam pip */}
+                    <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-background">
+                      <WebcamFeed isActive={cameraOn} />
+                    </div>
+                  </div>
+
+                  {/* Chat / Transcript Panel */}
+                  <div className="flex flex-col bg-card rounded-2xl border overflow-hidden">
+                    <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Transcript</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Q{messages.filter(m => m.role === "assistant").length}
+                      </Badge>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                      {messages.map((message, index) => (
                         <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mb-3"
+                          key={index}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex gap-2 ${message.role === "user" ? "flex-row-reverse" : ""}`}
                         >
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 text-primary text-sm">
-                            <div className="flex gap-1">
-                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
-                              <span className="w-1 h-4 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
-                            </div>
-                            <span className="font-medium">Listening...</span>
-                            {interimTranscript && (
-                              <span className="text-muted-foreground italic ml-2 truncate max-w-[200px]">
-                                "{interimTranscript}"
-                              </span>
-                            )}
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                            message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          }`}>
+                            {message.role === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                          </div>
+                          <div className={`max-w-[85%] p-3 rounded-xl text-sm ${
+                            message.role === "user" 
+                              ? "bg-primary text-primary-foreground rounded-br-sm" 
+                              : "bg-muted rounded-bl-sm"
+                          }`}>
+                            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                           </div>
                         </motion.div>
+                      ))}
+                      {sendingMessage && (
+                        <div className="flex gap-2">
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                            <Bot className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="bg-muted p-3 rounded-xl rounded-bl-sm">
+                            <LoadingSpinner size="sm" />
+                          </div>
+                        </div>
                       )}
-                    </AnimatePresence>
+                      <div ref={messagesEndRef} />
+                    </div>
 
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        placeholder={isListening ? "Speak now..." : "Type your answer or use voice input..."}
-                        className="resize-none"
-                        rows={2}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                          }
-                        }}
-                      />
-                      <div className="flex flex-col gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant={isListening ? "default" : "outline"}
-                              size="lg"
-                              onClick={toggleVoiceInput}
-                              disabled={!speechSupported}
-                              className={isListening ? "bg-primary animate-pulse" : ""}
-                            >
-                              {isListening ? (
-                                <MicOff className="w-5 h-5" />
-                              ) : (
-                                <Mic className="w-5 h-5" />
+                    {/* Input area */}
+                    <div className="border-t p-3 space-y-2">
+                      <AnimatePresence>
+                        {isListening && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                          >
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 text-primary text-xs">
+                              <div className="flex gap-0.5">
+                                {[0, 1, 2].map(i => (
+                                  <span key={i} className="w-0.5 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
+                                ))}
+                              </div>
+                              <span className="font-medium">Listening...</span>
+                              {interimTranscript && (
+                                <span className="text-muted-foreground italic truncate max-w-[120px]">
+                                  "{interimTranscript}"
+                                </span>
                               )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {!speechSupported 
-                              ? "Speech recognition not supported in this browser" 
-                              : isListening 
-                                ? "Stop voice input" 
-                                : "Start voice input"
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={inputMessage}
+                          onChange={(e) => setInputMessage(e.target.value)}
+                          placeholder={isListening ? "Speak now..." : "Type or use voice..."}
+                          className="resize-none text-sm min-h-[40px]"
+                          rows={1}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              sendMessage();
                             }
-                          </TooltipContent>
-                        </Tooltip>
+                          }}
+                        />
                         <Button 
                           onClick={sendMessage} 
                           disabled={!inputMessage.trim() || sendingMessage}
-                          size="lg"
+                          size="icon"
+                          className="shrink-0"
                         >
-                          <Send className="w-5 h-5" />
+                          <Send className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Press Enter to send • Shift+Enter for new line • Click mic for voice input
-                    </p>
                   </div>
-                </Card>
+                </div>
+
+                {/* Call Controls Bar */}
+                <div className="flex items-center justify-center gap-3 py-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isListening ? "default" : "outline"}
+                        size="lg"
+                        className={`rounded-full w-14 h-14 ${isListening ? "bg-primary animate-pulse" : ""}`}
+                        onClick={toggleVoiceInput}
+                        disabled={!speechSupported}
+                      >
+                        {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {!speechSupported ? "Not supported" : isListening ? "Mute" : "Unmute"}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={cameraOn ? "outline" : "secondary"}
+                        size="lg"
+                        className="rounded-full w-14 h-14"
+                        onClick={() => setCameraOn(!cameraOn)}
+                      >
+                        {cameraOn ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{cameraOn ? "Turn off camera" : "Turn on camera"}</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={ttsEnabled ? "outline" : "secondary"}
+                        size="lg"
+                        className="rounded-full w-14 h-14"
+                        onClick={() => {
+                          if (isSpeaking) stopSpeaking();
+                          setTtsEnabled(!ttsEnabled);
+                        }}
+                      >
+                        {ttsEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{ttsEnabled ? "Mute AI voice" : "Unmute AI voice"}</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="lg"
+                        className="rounded-full w-14 h-14"
+                        onClick={endInterview}
+                        disabled={loading}
+                      >
+                        {loading ? <LoadingSpinner size="sm" /> : <PhoneOff className="w-6 h-6" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>End Interview</TooltipContent>
+                  </Tooltip>
+                </div>
               </motion.div>
             )}
 
+            {/* ============ FEEDBACK VIEW ============ */}
             {view === "feedback" && feedback && (
               <motion.div
                 key="feedback"
@@ -805,7 +1030,6 @@ export default function MockInterviews() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Overall Rating */}
                 <Card className="text-center">
                   <CardContent className="py-8">
                     <div className="flex justify-center gap-1 mb-4">
@@ -825,7 +1049,6 @@ export default function MockInterviews() {
                   </CardContent>
                 </Card>
 
-                {/* Strengths & Improvements */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -866,7 +1089,6 @@ export default function MockInterviews() {
                   </Card>
                 </div>
 
-                {/* Tips */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -886,7 +1108,6 @@ export default function MockInterviews() {
                   </CardContent>
                 </Card>
 
-                {/* Question Breakdown */}
                 {feedback.questionFeedback && feedback.questionFeedback.length > 0 && (
                   <Card>
                     <CardHeader>
@@ -914,6 +1135,7 @@ export default function MockInterviews() {
               </motion.div>
             )}
 
+            {/* ============ HISTORY VIEW ============ */}
             {view === "history" && (
               <motion.div
                 key="history"
