@@ -148,16 +148,40 @@ Rate on a scale of 1-10. Be constructive and helpful.`;
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
 
-      if (!content || typeof content !== "string") {
+      console.log("Raw AI feedback content (first 1000 chars):", typeof content, String(content).substring(0, 1000));
+
+      if (!content) {
         throw new Error("Empty feedback response from AI");
       }
 
+      // Handle case where content might already be an object (some models do this)
+      if (typeof content === "object") {
+        return new Response(JSON.stringify(content), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const contentStr = String(content);
+
       let parsedFeedback: unknown;
       try {
-        parsedFeedback = extractJsonFromResponse(content);
+        parsedFeedback = extractJsonFromResponse(contentStr);
       } catch (parseError) {
         console.warn("Primary JSON parse failed, attempting recovery", parseError);
-        parsedFeedback = parseWithRecovery(content);
+        try {
+          parsedFeedback = parseWithRecovery(contentStr);
+        } catch (recoveryError) {
+          console.error("Recovery also failed. Full content:", contentStr.substring(0, 2000));
+          // Return a fallback feedback object so the user isn't stuck
+          parsedFeedback = {
+            overallRating: 5,
+            strengths: ["Unable to fully analyze - please try again"],
+            improvements: ["Unable to fully analyze - please try again"],
+            questionFeedback: [],
+            tips: ["Try ending the interview after more questions for better feedback"],
+            summary: "The AI was unable to generate structured feedback for this session. Please try again with a longer interview conversation."
+          };
+        }
       }
 
       return new Response(JSON.stringify(parsedFeedback), {
