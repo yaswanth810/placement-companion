@@ -81,7 +81,7 @@ Return ONLY valid JSON in this exact format:
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: \`Generate a complete learning module for the DSA topic: "\${topic}" at "\${difficulty}" difficulty level. The coding language should be "\${language}". Make the explanation thorough with real-world analogies and the coding challenges progressively harder.\`,
+            content: `Generate a complete learning module for the DSA topic: "${topic}" at "${difficulty}" difficulty level. The coding language should be "${language}". Make the explanation thorough with real-world analogies and the coding challenges progressively harder.`,
           },
         ],
         temperature: 0.7,
@@ -101,7 +101,7 @@ Return ONLY valid JSON in this exact format:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(\`AI gateway error: \${response.status}\`);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
