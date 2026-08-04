@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# Placement Prep Tracker
 
-## Project info
+An all-in-one placement preparation platform: track applications, practice DSA, take AI-generated mock tests, run AI mock interviews, manage resume versions, and plan your learning roadmap.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+### Dashboard
+- Consolidated view of applications, practice progress, learning goals and reminders
+- Charts and progress stats (Recharts)
 
-There are several ways of editing your application.
+### Application Tracker
+- Track company, role, job type, status, apply/interview dates, links and notes
+- Filter and manage the full application pipeline
 
-**Use Lovable**
+### Coding Practice
+- Log problems by platform, difficulty and status
+- Built-in Monaco code editor with multi-language support
+- Run code via the `run-code` edge function
+- AI-generated DSA content and explanations (`generate-dsa-content`)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Mock Tests
+- AI-generated question sets by category, subcategory and difficulty (`generate-test`)
+- Timed tests, scoring, answer review and history
 
-Changes made via Lovable will be committed automatically to this repo.
+### Mock Interviews
+- AI interviewer with configurable type, target role and difficulty (`mock-interview`)
+- Voice input via speech recognition and spoken questions via ElevenLabs text-to-speech (`text-to-speech`)
+- Structured feedback and overall rating per session
 
-**Use your preferred IDE**
+### Resume Manager
+- Multiple resume versions with version numbers, target role and change notes
+- Private file storage for resume uploads (PDF/DOC/DOCX)
+- Quality checklist: one page, ATS friendly, updated projects, updated skills
+- AI Resume Analyzer: paste text or upload a PDF for an ATS score, strengths, improvements and recommendations (`analyze-resume`, `parse-resume-pdf`)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Learning Goals
+- Skills and topics with status, start/target dates, resource links and notes
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Roadmap
+- Target role and company type, monthly goals, skill priorities and weakness tracking
 
-Follow these steps:
+### Reminders
+- Custom reminders by type, toggleable active state
+
+### Platform
+- Email/password authentication with per-user profiles
+- Row Level Security so every user only sees their own data
+- Responsive layout, animated page transitions, light/dark theming, toasts and empty/loading states
+
+## Tech Stack
+
+**Frontend**
+- React 18 + TypeScript
+- Vite 5 (SWC plugin)
+- Tailwind CSS 3 + tailwindcss-animate + typography plugin
+- shadcn/ui on Radix UI primitives
+- Framer Motion (animations)
+- React Router 6
+- TanStack Query
+- React Hook Form + Zod
+- Recharts (charts), Lucide (icons), Sonner (toasts), date-fns
+- Monaco Editor (`@monaco-editor/react`)
+- react-markdown, next-themes
+
+**Backend (Lovable Cloud)**
+- Postgres database with Row Level Security
+- Auth (email/password) with a `handle_new_user` trigger creating profiles
+- Private storage bucket for resumes
+- Deno edge functions: `analyze-resume`, `parse-resume-pdf`, `generate-dsa-content`, `generate-test`, `mock-interview`, `run-code`, `text-to-speech`
+
+**AI**
+- Lovable AI Gateway with Google Gemini models for analysis, question generation and interviews
+- ElevenLabs for text-to-speech
+
+**Tooling**
+- Vitest + Testing Library + jsdom
+- ESLint 9 + typescript-eslint
+
+## Database Tables
+
+`profiles`, `applications`, `coding_problems`, `mock_tests`, `mock_interviews`, `resumes`, `learning_goals`, `roadmap`, `reminders`
+
+## Getting Started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Scripts: `npm run dev`, `npm run build`, `npm run lint`, `npm run test`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Deployment
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Open the project in Lovable and click Share → Publish. Custom domains are configured under Project > Settings > Domains.
